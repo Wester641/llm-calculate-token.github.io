@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Token Cost Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .model-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .model-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .model-card.best {
+            border-color: #4caf50;
+            background: linear-gradient(135deg, #f1f8f4 0%, #ffffff 100%);
+        }
+
+        .model-card.best::before {
+            content: "🏆 ЛУЧШИЙ ВЫБОР";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #4caf50;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        .model-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .cost-item:last-child {
+            border-bottom: none;
+        }
+
+        .cost-label {
+            color: #666;
+        }
+
+        .cost-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .total-cost {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .info-box h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            list-style-position: inside;
+            color: #555;
+        }
+
+        .info-box li {
+            margin: 8px 0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .results {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 LLM Token Cost Calculator</h1>
+        <p class="subtitle">Рассчитайте стоимость аудита кода для разных AI моделей</p>
+
+        <div class="info-box">
+            <h3>📌 Примерные токены для вашего workflow:</h3>
+            <ul>
+                <li><strong>Код репозитория (150KB):</strong> ~42,000-50,000 токенов</li>
+                <li><strong>Системный промпт:</strong> ~500 токенов</li>
+                <li><strong>Markdown отчет:</strong> ~4,000-6,000 токенов</li>
+                <li><strong>HTML форматирование:</strong> ~5,000-7,000 токенов</li>
+            </ul>
+        </div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <label for="inputTokens">📥 Input токены (промпт + код):</label>
+                <input type="number" id="inputTokens" value="50500" min="0" step="1000">
+            </div>
+
+            <div class="input-group">
+                <label for="outputTokens">📤 Output токены (отчет):</label>
+                <input type="number" id="outputTokens" value="11000" min="0" step="1000">
+            </div>
+
+            <div class="input-group">
+                <label for="runsPerMonth">🔄 Запусков в месяц:</label>
+                <input type="number" id="runsPerMonth" value="4" min="1" step="1">
+            </div>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const models = [
+            {
+                name: "Google Gemini 2.0 Flash",
+                inputPrice: 0.075 / 1000000,
+                outputPrice: 0.30 / 1000000,
+                isBest: true,
+                note: "Очень дешево, отличное качество"
+            },
+            {
+                name: "Google Gemini 1.5 Flash",
+                inputPrice: 0.075 / 1000000,
+                outputPrice: 0.30 / 1000000,
+                isBest: false,
+                note: "Дешево и быстро"
+            },
+            {
+                name: "Google Gemini 1.5 Pro",
+                inputPrice: 1.25 / 1000000,
+                outputPrice: 5.00 / 1000000,
+                isBest: false,
+                note: "Лучшее качество от Google"
+            },
+            {
+                name: "OpenAI GPT-4o",
+                inputPrice: 2.50 / 1000000,
+                outputPrice: 10.00 / 1000000,
+                isBest: false,
+                note: "Премиум качество"
+            },
+            {
+                name: "OpenAI GPT-4o Mini",
+                inputPrice: 0.15 / 1000000,
+                outputPrice: 0.60 / 1000000,
+                isBest: false,
+                note: "Баланс цена/качество"
+            },
+            {
+                name: "Claude 3.5 Sonnet",
+                inputPrice: 3.00 / 1000000,
+                outputPrice: 15.00 / 1000000,
+                isBest: false,
+                note: "Лучший для code review"
+            },
+            {
+                name: "Claude 3 Haiku",
+                inputPrice: 0.25 / 1000000,
+                outputPrice: 1.25 / 1000000,
+                isBest: false,
+                note: "Быстро и недорого"
+            },
+            {
+                name: "Groq Llama 3.3 70B",
+                inputPrice: 0.59 / 1000000,
+                outputPrice: 0.79 / 1000000,
+                isBest: false,
+                note: "Очень быстро"
+            },
+            {
+                name: "Groq Qwen 2.5 32B",
+                inputPrice: 0.10 / 1000000,
+                outputPrice: 0.10 / 1000000,
+                isBest: false,
+                note: "Супер дешево"
+            }
+        ];
+
+        function calculate() {
+            const inputTokens = parseInt(document.getElementById('inputTokens').value);
+            const outputTokens = parseInt(document.getElementById('outputTokens').value);
+            const runsPerMonth = parseInt(document.getElementById('runsPerMonth').value);
+
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            models.forEach(model => {
+                const inputCost = inputTokens * model.inputPrice;
+                const outputCost = outputTokens * model.outputPrice;
+                const totalPerRun = inputCost + outputCost;
+                const monthlyTotal = totalPerRun * runsPerMonth;
+
+                const card = document.createElement('div');
+                card.className = `model-card ${model.isBest ? 'best' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="model-name">${model.name}</div>
+                    <div class="cost-item">
+                        <span class="cost-label">Input (${inputTokens.toLocaleString()} токенов):</span>
+                        <span class="cost-value">$${inputCost.toFixed(4)}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span class="cost-label">Output (${outputTokens.toLocaleString()} токенов):</span>
+                        <span class="cost-value">$${outputCost.toFixed(4)}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span class="cost-label">За 1 запуск:</span>
+                        <span class="cost-value">$${totalPerRun.toFixed(4)}</span>
+                    </div>
+                    <div class="total-cost">
+                        ${runsPerMonth} запуска/мес: $${monthlyTotal.toFixed(2)}
+                    </div>
+                    <div style="margin-top: 15px; color: #666; font-size: 0.9em; text-align: center;">
+                        ${model.note}
+                    </div>
+                `;
+                
+                resultsDiv.appendChild(card);
+            });
+        }
+
+        document.getElementById('inputTokens').addEventListener('input', calculate);
+        document.getElementById('outputTokens').addEventListener('input', calculate);
+        document.getElementById('runsPerMonth').addEventListener('input', calculate);
+
+        calculate();
+    </script>
+</body>
+</html>
